@@ -15,15 +15,16 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.util.regex.Pattern;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.util.regex.Pattern;
 
 public class KenjiProtocolDecoder extends BaseProtocolDecoder {
 
@@ -47,7 +48,7 @@ public class KenjiProtocolDecoder extends BaseProtocolDecoder {
             .number("G(d+)")                     // satellites
             .any()
             .compile();
-    
+
     @Override
     protected Object decode(
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
@@ -60,14 +61,15 @@ public class KenjiProtocolDecoder extends BaseProtocolDecoder {
         Position position = new Position();
         position.setProtocol(getProtocolName());
 
-        if (!identify(parser.next(), channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
+        if (deviceSession == null) {
             return null;
         }
-        position.setDeviceId(getDeviceId());
+        position.setDeviceId(deviceSession.getDeviceId());
 
-        position.set(Event.KEY_ALARM, parser.nextInt(16));
-        position.set(Event.KEY_OUTPUT, parser.nextInt(16));
-        position.set(Event.KEY_INPUT, parser.nextInt(16));
+        position.set(Position.KEY_ALARM, parser.nextInt(16));
+        position.set(Position.KEY_OUTPUT, parser.nextInt(16));
+        position.set(Position.KEY_INPUT, parser.nextInt(16));
 
         DateBuilder dateBuilder = new DateBuilder()
                 .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
@@ -82,7 +84,7 @@ public class KenjiProtocolDecoder extends BaseProtocolDecoder {
         dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
         position.setTime(dateBuilder.getDate());
 
-        position.set(Event.KEY_SATELLITES, parser.nextInt());
+        position.set(Position.KEY_SATELLITES, parser.nextInt());
 
         return position;
     }

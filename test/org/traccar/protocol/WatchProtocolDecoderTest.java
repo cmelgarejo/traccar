@@ -10,6 +10,16 @@ public class WatchProtocolDecoderTest extends ProtocolTest {
 
         WatchProtocolDecoder decoder = new WatchProtocolDecoder(new WatchProtocol());
 
+        verifyPosition(decoder, text(
+                "[3G*6105117105*008D*UD2,210716,231601,V,-33.480366,N,-70.7630692,E,0.00,0.0,0.0,0,100,34,0,0,00000000,3,255,730,2,29731,54315,167,29731,54316,162,29731,54317,145"),
+                position("2016-07-21 23:16:01.000", false, -33.48037, -70.76307));
+
+        verifyPosition(decoder, text(
+                "[3G*4700222306*0077*UD,120316,140610,V,48.779045,N, 9.1574736,E,0.00,0.0,0.0,0,25,83,0,0,00000000,2,255,262,1,21041,9067,121,21041,5981,116"));
+
+        verifyPosition(decoder, text(
+                "[3G*4700222306*011F*UD2,120316,140444,A,48.779045,N, 9.1574736,E,0.57,12.8,0.0,7,28,77,0,0,00000000,2,2,262,1,21041,9067,121,21041,5981,116,5,WG-Superlativ,34:31:c4:c8:a9:22,-67,EasyBox-28E858,18:83:bf:28:e8:f4,-70,MoMaXXg,be:05:43:b7:19:15,-72,MoMaXX2,bc:05:43:b7:19:15,-72,Gastzugang,18:83:bf:28:e8:f5,-72"));
+
         verifyNothing(decoder, text(
                 "[SG*9081000548*0009*LK,0,100"));
 

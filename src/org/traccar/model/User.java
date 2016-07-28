@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,10 @@
  */
 package org.traccar.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.traccar.helper.Hashing;
-import org.traccar.web.JsonIgnore;
 
-public class User {
-
-    private long id;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
+public class User extends Extensible {
 
     private String name;
 
@@ -78,16 +68,6 @@ public class User {
 
     public void setMap(String map) {
         this.map = map;
-    }
-
-    private String language;
-
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
     }
 
     private String distanceUnit;
@@ -140,6 +120,16 @@ public class User {
         this.zoom = zoom;
     }
 
+    private boolean twelveHourFormat;
+
+    public boolean getTwelveHourFormat() {
+        return twelveHourFormat;
+    }
+
+    public void setTwelveHourFormat(boolean twelveHourFormat) {
+        this.twelveHourFormat = twelveHourFormat;
+    }
+
     private String password;
 
     public String getPassword() {
@@ -157,7 +147,6 @@ public class User {
 
     private String hashedPassword;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
     @JsonIgnore
     public String getHashedPassword() {
         return hashedPassword;
@@ -169,7 +158,6 @@ public class User {
 
     private String salt;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
     @JsonIgnore
     public String getSalt() {
         return salt;

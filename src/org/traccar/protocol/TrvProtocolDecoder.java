@@ -17,11 +17,11 @@ package org.traccar.protocol;
 
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -82,11 +82,12 @@ public class TrvProtocolDecoder extends BaseProtocolDecoder {
         }
 
         if (type.equals("AP00")) {
-            identify(sentence.substring(7), channel, remoteAddress);
+            getDeviceSession(channel, remoteAddress, sentence.substring(7));
             return null;
         }
 
-        if (!hasDeviceId()) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress);
+        if (deviceSession == null) {
             return null;
         }
 
@@ -99,14 +100,14 @@ public class TrvProtocolDecoder extends BaseProtocolDecoder {
 
             Position position = new Position();
             position.setProtocol(getProtocolName());
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
             getLastLocation(position, null);
 
-            position.set(Event.KEY_GSM, parser.nextInt());
-            position.set(Event.KEY_SATELLITES, parser.nextInt());
-            position.set(Event.KEY_BATTERY  , parser.nextInt());
-            position.set(Event.KEY_IGNITION, parser.nextInt() != 0);
+            position.set(Position.KEY_GSM, parser.nextInt());
+            position.set(Position.KEY_SATELLITES, parser.nextInt());
+            position.set(Position.KEY_BATTERY, parser.nextInt());
+            position.set(Position.KEY_IGNITION, parser.nextInt() != 0);
 
             position.set("arm", parser.nextInt());
             position.set("mode", parser.nextInt());
@@ -122,7 +123,7 @@ public class TrvProtocolDecoder extends BaseProtocolDecoder {
 
             Position position = new Position();
             position.setProtocol(getProtocolName());
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
             DateBuilder dateBuilder = new DateBuilder()
                     .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt());
@@ -137,19 +138,19 @@ public class TrvProtocolDecoder extends BaseProtocolDecoder {
 
             position.setCourse(parser.nextDouble());
 
-            position.set(Event.KEY_GSM, parser.nextInt());
-            position.set(Event.KEY_SATELLITES, parser.nextInt());
-            position.set(Event.KEY_BATTERY, parser.nextInt());
+            position.set(Position.KEY_GSM, parser.nextInt());
+            position.set(Position.KEY_SATELLITES, parser.nextInt());
+            position.set(Position.KEY_BATTERY, parser.nextInt());
 
             int acc = parser.nextInt();
             if (acc != 0) {
-                position.set(Event.KEY_IGNITION, acc == 1);
+                position.set(Position.KEY_IGNITION, acc == 1);
             }
 
-            position.set(Event.KEY_MCC, parser.nextInt());
-            position.set(Event.KEY_MNC, parser.nextInt());
-            position.set(Event.KEY_LAC, parser.nextInt());
-            position.set(Event.KEY_CID, parser.nextInt());
+            position.set(Position.KEY_MCC, parser.nextInt());
+            position.set(Position.KEY_MNC, parser.nextInt());
+            position.set(Position.KEY_LAC, parser.nextInt());
+            position.set(Position.KEY_CID, parser.nextInt());
 
             return position;
         }

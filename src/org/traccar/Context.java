@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,14 @@ package org.traccar;
 import com.ning.http.client.AsyncHttpClient;
 import org.traccar.database.ConnectionManager;
 import org.traccar.database.DataManager;
+import org.traccar.database.DeviceManager;
 import org.traccar.database.IdentityManager;
+import org.traccar.database.NotificationManager;
 import org.traccar.database.PermissionsManager;
+import org.traccar.database.GeofenceManager;
 import org.traccar.geocode.BingMapsReverseGeocoder;
 import org.traccar.geocode.FactualReverseGeocoder;
+import org.traccar.geocode.GeocodeFarmReverseGeocoder;
 import org.traccar.geocode.GisgraphyReverseGeocoder;
 import org.traccar.geocode.GoogleReverseGeocoder;
 import org.traccar.geocode.MapQuestReverseGeocoder;
@@ -32,6 +36,7 @@ import org.traccar.helper.Log;
 import org.traccar.location.LocationProvider;
 import org.traccar.location.MozillaLocationProvider;
 import org.traccar.location.OpenCellIdLocationProvider;
+import org.traccar.notification.EventForwarder;
 import org.traccar.web.WebServer;
 
 public final class Context {
@@ -61,6 +66,12 @@ public final class Context {
 
     public static DataManager getDataManager() {
         return dataManager;
+    }
+
+    private static DeviceManager deviceManager;
+
+    public static DeviceManager getDeviceManager() {
+        return deviceManager;
     }
 
     private static ConnectionManager connectionManager;
@@ -99,10 +110,28 @@ public final class Context {
         return serverManager;
     }
 
+    private static GeofenceManager geofenceManager;
+
+    public static GeofenceManager getGeofenceManager() {
+        return geofenceManager;
+    }
+
+    private static NotificationManager notificationManager;
+
+    public static NotificationManager getNotificationManager() {
+        return notificationManager;
+    }
+
     private static final AsyncHttpClient ASYNC_HTTP_CLIENT = new AsyncHttpClient();
 
     public static AsyncHttpClient getAsyncHttpClient() {
         return ASYNC_HTTP_CLIENT;
+    }
+
+    private static EventForwarder eventForwarder;
+
+    public static EventForwarder getEventForvarder() {
+        return eventForwarder;
     }
 
     public static void init(String[] arguments) throws Exception {
@@ -120,7 +149,12 @@ public final class Context {
         if (config.hasKey("database.url")) {
             dataManager = new DataManager(config);
         }
-        identityManager = dataManager;
+
+        if (dataManager != null) {
+            deviceManager = new DeviceManager(dataManager);
+        }
+
+        identityManager = deviceManager;
 
         if (config.getBoolean("geocoder.enable")) {
             String type = config.getString("geocoder.type", "google");
@@ -147,8 +181,18 @@ public final class Context {
                 case "factual":
                     reverseGeocoder = new FactualReverseGeocoder(url, key, cacheSize);
                     break;
+                case "geocodefarm":
+                    if (key != null) {
+                        reverseGeocoder = new GeocodeFarmReverseGeocoder(key, cacheSize);
+                    } else {
+                        reverseGeocoder = new GeocodeFarmReverseGeocoder(cacheSize);
+                    }
                 default:
-                    reverseGeocoder = new GoogleReverseGeocoder(cacheSize);
+                    if (key != null) {
+                        reverseGeocoder = new GoogleReverseGeocoder(key, cacheSize);
+                    } else {
+                        reverseGeocoder = new GoogleReverseGeocoder(cacheSize);
+                    }
                     break;
             }
         }
@@ -168,18 +212,31 @@ public final class Context {
         }
 
         if (config.getBoolean("web.enable")) {
-            permissionsManager = new PermissionsManager(dataManager);
             webServer = new WebServer(config, dataManager.getDataSource());
         }
 
-        connectionManager = new ConnectionManager(dataManager);
+        permissionsManager = new PermissionsManager(dataManager);
+
+        connectionManager = new ConnectionManager();
+
+        if (config.getBoolean("event.geofenceHandler")) {
+            geofenceManager = new GeofenceManager(dataManager);
+        }
+
+        if (config.getBoolean("event.enable")) {
+            notificationManager = new NotificationManager(dataManager);
+        }
 
         serverManager = new ServerManager();
+
+        if (config.getBoolean("event.forward.enable")) {
+            eventForwarder = new EventForwarder();
+        }
+
     }
 
     public static void init(IdentityManager testIdentityManager) {
         config = new Config();
-        connectionManager = new ConnectionManager(null);
         identityManager = testIdentityManager;
     }
 

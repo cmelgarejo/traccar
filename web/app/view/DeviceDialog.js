@@ -18,7 +18,7 @@ Ext.define('Traccar.view.DeviceDialog', {
     extend: 'Traccar.view.BaseEditDialog',
 
     requires: [
-        'Traccar.view.BaseEditDialogController'
+        'Traccar.view.BaseEditDialog'
     ],
 
     controller: 'baseEditDialog',
@@ -29,13 +29,21 @@ Ext.define('Traccar.view.DeviceDialog', {
         items: [{
             xtype: 'textfield',
             name: 'name',
-            fieldLabel: Strings.deviceName,
+            fieldLabel: Strings.sharedName,
             allowBlank: false
         }, {
             xtype: 'textfield',
             name: 'uniqueId',
             fieldLabel: Strings.deviceIdentifier,
             allowBlank: false
+        }, {
+            xtype: 'combobox',
+            name: 'groupId',
+            fieldLabel: Strings.groupParent,
+            store: 'Groups',
+            queryMode: 'local',
+            displayField: 'name',
+            valueField: 'id'
         }]
     }
 });

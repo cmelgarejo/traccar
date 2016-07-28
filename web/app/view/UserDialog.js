@@ -22,15 +22,14 @@ Ext.define('Traccar.view.UserDialog', {
     ],
 
     controller: 'userDialog',
-
     title: Strings.settingsUser,
 
-    items: {
+    items: [{
         xtype: 'form',
         items: [{
             xtype: 'textfield',
             name: 'name',
-            fieldLabel: Strings.userName
+            fieldLabel: Strings.sharedName
         }, {
             xtype: 'textfield',
             name: 'email',
@@ -84,6 +83,11 @@ Ext.define('Traccar.view.UserDialog', {
             xtype: 'numberfield',
             name: 'zoom',
             fieldLabel: Strings.serverZoom
+        }, {
+            xtype: 'checkboxfield',
+            name: 'twelveHourFormat',
+            fieldLabel: Strings.settingsTwelveHourFormat,
+            allowBlank: false
         }]
-    }
+    }]
 });

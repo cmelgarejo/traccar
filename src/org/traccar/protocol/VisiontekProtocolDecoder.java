@@ -15,16 +15,17 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.util.regex.Pattern;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.util.regex.Pattern;
 
 public class VisiontekProtocolDecoder extends BaseProtocolDecoder {
 
@@ -80,12 +81,11 @@ public class VisiontekProtocolDecoder extends BaseProtocolDecoder {
         Position position = new Position();
         position.setProtocol(getProtocolName());
 
-        String id = parser.next();
-        String imei = parser.next();
-        if (!identify(id, channel, remoteAddress, false) && (imei == null || !identify(imei, channel, remoteAddress))) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next(), parser.next());
+        if (deviceSession == null) {
             return null;
         }
-        position.setDeviceId(getDeviceId());
+        position.setDeviceId(deviceSession.getDeviceId());
 
         DateBuilder dateBuilder = new DateBuilder()
                 .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
@@ -107,18 +107,18 @@ public class VisiontekProtocolDecoder extends BaseProtocolDecoder {
         position.setCourse(parser.nextDouble());
         position.setAltitude(parser.nextDouble());
 
-        position.set(Event.KEY_SATELLITES, parser.next());
-        position.set(Event.KEY_ODOMETER, parser.next());
-        position.set(Event.KEY_IGNITION, parser.next());
-        position.set(Event.PREFIX_IO + 1, parser.next());
-        position.set(Event.PREFIX_IO + 2, parser.next());
+        position.set(Position.KEY_SATELLITES, parser.next());
+        position.set(Position.KEY_ODOMETER, parser.next());
+        position.set(Position.KEY_IGNITION, parser.next());
+        position.set(Position.PREFIX_IO + 1, parser.next());
+        position.set(Position.PREFIX_IO + 2, parser.next());
         position.set("immobilizer", parser.next());
-        position.set(Event.KEY_POWER, parser.next());
-        position.set(Event.KEY_GSM, parser.next());
+        position.set(Position.KEY_POWER, parser.next());
+        position.set(Position.KEY_GSM, parser.next());
 
         position.setValid(parser.next().equals("A"));
 
-        position.set(Event.KEY_RFID, parser.next());
+        position.set(Position.KEY_RFID, parser.next());
 
         return position;
     }

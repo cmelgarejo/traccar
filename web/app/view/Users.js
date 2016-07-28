@@ -35,6 +35,21 @@ Ext.define('Traccar.view.Users', {
             disabled: true,
             handler: 'onDevicesClick',
             reference: 'userDevicesButton'
+        }, {
+            text: Strings.settingsGroups,
+            disabled: true,
+            handler: 'onGroupsClick',
+            reference: 'userGroupsButton'
+        }, {
+            text: Strings.sharedGeofences,
+            disabled: true,
+            handler: 'onGeofencesClick',
+            reference: 'userGeofencesButton'
+        }, {
+            text: Strings.sharedNotifications,
+            disabled: true,
+            handler: 'onNotificationsClick',
+            reference: 'userNotificationsButton'
         }]
     },
 
@@ -43,7 +58,7 @@ Ext.define('Traccar.view.Users', {
     },
 
     columns: [{
-        text: Strings.userName,
+        text: Strings.sharedName,
         dataIndex: 'name',
         flex: 1
     }, {

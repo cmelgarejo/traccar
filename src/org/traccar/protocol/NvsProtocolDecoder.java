@@ -19,12 +19,12 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,7 +37,7 @@ public class NvsProtocolDecoder extends BaseProtocolDecoder {
 
     private void sendResponse(Channel channel, String response) {
         if (channel != null) {
-            channel.write(ChannelBuffers.copiedBuffer(response, Charset.defaultCharset()));
+            channel.write(ChannelBuffers.copiedBuffer(response, StandardCharsets.US_ASCII));
         }
     }
 
@@ -52,15 +52,20 @@ public class NvsProtocolDecoder extends BaseProtocolDecoder {
 
             buf.readUnsignedShort(); // length
 
-            String imei = buf.toString(buf.readerIndex(), 15, Charset.defaultCharset());
+            String imei = buf.toString(buf.readerIndex(), 15, StandardCharsets.US_ASCII);
 
-            if (!identify(imei, channel, remoteAddress)) {
-                sendResponse(channel, "NO01");
-            } else {
+            if (getDeviceSession(channel, remoteAddress, imei) != null) {
                 sendResponse(channel, "OK");
+            } else {
+                sendResponse(channel, "NO01");
             }
 
-        } else if (hasDeviceId()) {
+        } else {
+
+            DeviceSession deviceSession = getDeviceSession(channel, remoteAddress);
+            if (deviceSession == null) {
+                return null;
+            }
 
             List<Position> positions = new LinkedList<>();
 
@@ -73,7 +78,7 @@ public class NvsProtocolDecoder extends BaseProtocolDecoder {
             for (int i = 0; i < count; i++) {
                 Position position = new Position();
                 position.setProtocol(getProtocolName());
-                position.setDeviceId(getDeviceId());
+                position.setDeviceId(deviceSession.getDeviceId());
 
                 position.setTime(new Date(buf.readUnsignedInt() * 1000));
 
@@ -84,7 +89,7 @@ public class NvsProtocolDecoder extends BaseProtocolDecoder {
                 position.setAltitude(buf.readShort());
                 position.setCourse(buf.readUnsignedShort());
 
-                position.set(Event.KEY_SATELLITES, buf.readUnsignedByte());
+                position.set(Position.KEY_SATELLITES, buf.readUnsignedByte());
 
                 position.setSpeed(UnitsConverter.knotsFromKph(buf.readUnsignedShort()));
                 position.setValid(buf.readUnsignedByte() != 0);
@@ -96,25 +101,25 @@ public class NvsProtocolDecoder extends BaseProtocolDecoder {
                 // Read 1 byte data
                 int cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedByte());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedByte());
                 }
 
                 // Read 2 byte data
                 cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedShort());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedShort());
                 }
 
                 // Read 4 byte data
                 cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedInt());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedInt());
                 }
 
                 // Read 8 byte data
                 cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readLong());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readLong());
                 }
 
                 positions.add(position);

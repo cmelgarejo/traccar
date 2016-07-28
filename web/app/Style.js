@@ -22,8 +22,10 @@ Ext.define('Traccar.Style', {
     windowWidth: 640,
     windowHeight: 480,
 
-    dateTimeFormat: 'Y-m-d H:i:s',
-    timeFormat: 'H:i',
+    dateTimeFormat24: 'Y-m-d H:i:s',
+    dateTimeFormat12: 'Y-m-d g:i:s a',
+    timeFormat24: 'H:i',
+    timeFormat12: 'g:i a',
     dateFormat: 'Y-m-d',
     weekStartDay: 1,
 
@@ -52,6 +54,7 @@ Ext.define('Traccar.Style', {
     mapColorUnknown: 'rgba(250, 190, 77, 1.0)',
     mapColorOffline: 'rgba(255, 84, 104, 1.0)',
     mapColorReport: 'rgba(21, 127, 204, 1.0)',
+    mapColorOverlay: 'rgba(21, 127, 204, 0.2)',
 
     mapRadiusNormal: 9,
     mapRadiusSelected: 14,

@@ -15,25 +15,24 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.nio.charset.Charset;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.joda.time.format.ISODateTimeFormat;
 import org.traccar.BaseProtocolDecoder;
-import org.traccar.model.Event;
+import org.traccar.DeviceSession;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
 
@@ -49,8 +48,7 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
         QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
         Map<String, List<String>> params = decoder.getParameters();
         if (params.isEmpty()) {
-            decoder = new QueryStringDecoder(
-                    request.getContent().toString(Charset.defaultCharset()), false);
+            decoder = new QueryStringDecoder(request.getContent().toString(StandardCharsets.US_ASCII), false);
             params = decoder.getParameters();
         }
 
@@ -63,10 +61,15 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
             switch (entry.getKey()) {
                 case "id":
                 case "deviceid":
-                    if (!identify(value, channel, remoteAddress)) {
+                    DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, value);
+                    if (deviceSession == null) {
+                        if (channel != null) {
+                            channel.write(
+                                    new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
+                        }
                         return null;
                     }
-                    position.setDeviceId(getDeviceId());
+                    position.setDeviceId(deviceSession.getDeviceId());
                     break;
                 case "valid":
                     position.setValid(Boolean.parseBoolean(value));
@@ -105,10 +108,10 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
                     position.setAltitude(Double.parseDouble(value));
                     break;
                 case "hdop":
-                    position.set(Event.KEY_HDOP, Double.parseDouble(value));
+                    position.set(Position.KEY_HDOP, Double.parseDouble(value));
                     break;
                 case "batt":
-                    position.set(Event.KEY_BATTERY, value);
+                    position.set(Position.KEY_BATTERY, value);
                     break;
                 default:
                     position.set(entry.getKey(), value);
@@ -121,9 +124,7 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
         }
 
         if (channel != null) {
-            HttpResponse response = new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            channel.write(response).addListener(ChannelFutureListener.CLOSE);
+            channel.write(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
         }
 
         return position;

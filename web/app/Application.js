@@ -26,14 +26,20 @@ Ext.define('Traccar.Application', {
     models: [
         'Server',
         'User',
+        'Group',
         'Device',
         'Position',
         'Attribute',
-        'Command'
+        'Command',
+        'Event',
+        'Geofence',
+        'Notification'
     ],
 
     stores: [
+        'Groups',
         'Devices',
+        'AllGroups',
         'AllDevices',
         'Positions',
         'LatestPositions',
@@ -44,7 +50,13 @@ Ext.define('Traccar.Application', {
         'SpeedUnits',
         'CommandTypes',
         'TimeUnits',
-        'Languages'
+        'Languages',
+        'Events',
+        'Geofences',
+        'AllGeofences',
+        'Notifications',
+        'AllNotifications',
+        'GeofenceTypes'
     ],
 
     controllers: [

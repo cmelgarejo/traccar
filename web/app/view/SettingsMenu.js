@@ -32,6 +32,12 @@ Ext.define('Traccar.view.SettingsMenu', {
             text: Strings.settingsUser,
             handler: 'onUserClick'
         }, {
+            text: Strings.settingsGroups,
+            handler: 'onGroupsClick'
+        }, {
+            text: Strings.sharedGeofences,
+            handler: 'onGeofencesClick'
+        }, {
             text: Strings.settingsServer,
             hidden: true,
             handler: 'onServerClick',
@@ -41,6 +47,9 @@ Ext.define('Traccar.view.SettingsMenu', {
             hidden: true,
             handler: 'onUsersClick',
             reference: 'settingsUsersButton'
+        }, {
+            text: Strings.sharedNotifications,
+            handler: 'onNotificationsClick'
         }, {
             text: Strings.loginLogout,
             handler: 'onLogoutClick'

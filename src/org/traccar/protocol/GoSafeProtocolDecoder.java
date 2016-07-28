@@ -15,19 +15,21 @@
  */
 package org.traccar.protocol;
 
+import org.jboss.netty.channel.Channel;
+import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
+import org.traccar.helper.BitUtil;
+import org.traccar.helper.DateBuilder;
+import org.traccar.helper.Parser;
+import org.traccar.helper.PatternBuilder;
+import org.traccar.helper.UnitsConverter;
+import org.traccar.model.Position;
+
 import java.net.SocketAddress;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.jboss.netty.channel.Channel;
-import org.traccar.BaseProtocolDecoder;
-import org.traccar.helper.BitUtil;
-import org.traccar.helper.DateBuilder;
-import org.traccar.helper.Parser;
-import org.traccar.helper.PatternBuilder;
-import org.traccar.model.Event;
-import org.traccar.model.Position;
 
 public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
 
@@ -64,7 +66,15 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             .expression(",?")
             .groupEnd()
             .groupBegin()
-            .text("GSM:").expression("[^,]*,?")
+            .text("GSM:")
+            .number("d+;")                       // registration
+            .number("d+;")                       // gsm signal
+            .number("(d+);")                     // mcc
+            .number("(d+);")                     // mnc
+            .number("(x+);")                     // lac
+            .number("(x+);")                     // cid
+            .number("-d+")                       // rssi
+            .expression("[^,]*,?")
             .groupEnd("?")
             .groupBegin()
             .text("COT:")
@@ -117,36 +127,44 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             .any()
             .compile();
 
-    private Position decodePosition(Parser parser, Date time) {
+    private Position decodePosition(DeviceSession deviceSession, Parser parser, Date time) {
 
         Position position = new Position();
         position.setProtocol(getProtocolName());
-        position.setDeviceId(getDeviceId());
+        position.setDeviceId(deviceSession.getDeviceId());
 
         if (time != null) {
             position.setTime(time);
         }
 
-        position.set(Event.KEY_EVENT, parser.next());
+        position.set(Position.KEY_EVENT, parser.next());
 
         position.setValid(parser.next().equals("A"));
-        position.set(Event.KEY_SATELLITES, parser.next());
+        position.set(Position.KEY_SATELLITES, parser.next());
 
         position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
         position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
-        position.setSpeed(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
         position.setCourse(parser.nextDouble());
         position.setAltitude(parser.nextDouble());
 
-        position.set(Event.KEY_HDOP, parser.next());
-        position.set(Event.KEY_ODOMETER, parser.next());
-        position.set(Event.KEY_POWER, parser.next());
-        position.set(Event.KEY_BATTERY, parser.next());
+        position.set(Position.KEY_HDOP, parser.next());
+
+        if (parser.hasNext(4)) {
+            position.set(Position.KEY_MCC, parser.nextInt());
+            position.set(Position.KEY_MNC, parser.nextInt());
+            position.set(Position.KEY_LAC, parser.nextInt(16));
+            position.set(Position.KEY_CID, parser.nextInt(16));
+        }
+
+        position.set(Position.KEY_ODOMETER, parser.next());
+        position.set(Position.KEY_POWER, parser.next());
+        position.set(Position.KEY_BATTERY, parser.next());
 
         String status = parser.next();
         if (status != null) {
-            position.set(Event.KEY_IGNITION, BitUtil.check(Integer.parseInt(status, 16), 13));
-            position.set(Event.KEY_STATUS, status);
+            position.set(Position.KEY_IGNITION, BitUtil.check(Integer.parseInt(status, 16), 13));
+            position.set(Position.KEY_STATUS, status);
         }
 
         if (parser.hasNext()) {
@@ -175,7 +193,8 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             return null;
         }
 
-        if (!identify(parser.next(), channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
+        if (deviceSession == null) {
             return null;
         }
 
@@ -183,7 +202,7 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
 
             Position position = new Position();
             position.setProtocol(getProtocolName());
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
             DateBuilder dateBuilder = new DateBuilder()
                     .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
@@ -194,7 +213,7 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             position.setSpeed(parser.nextDouble());
             position.setCourse(parser.nextDouble());
 
-            position.set(Event.KEY_HDOP, parser.next());
+            position.set(Position.KEY_HDOP, parser.next());
 
             dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
             position.setTime(dateBuilder.getDate());
@@ -214,7 +233,7 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             List<Position> positions = new LinkedList<>();
             Parser itemParser = new Parser(PATTERN_ITEM, parser.next());
             while (itemParser.find()) {
-                positions.add(decodePosition(itemParser, time));
+                positions.add(decodePosition(deviceSession, itemParser, time));
             }
 
             return positions;

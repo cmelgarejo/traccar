@@ -15,15 +15,16 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.util.regex.Pattern;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.util.regex.Pattern;
 
 public class YwtProtocolDecoder extends BaseProtocolDecoder {
 
@@ -81,10 +82,11 @@ public class YwtProtocolDecoder extends BaseProtocolDecoder {
 
         String type = parser.next();
 
-        if (!identify(parser.next(), channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
+        if (deviceSession == null) {
             return null;
         }
-        position.setDeviceId(getDeviceId());
+        position.setDeviceId(deviceSession.getDeviceId());
 
         DateBuilder dateBuilder = new DateBuilder()
                 .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
@@ -99,11 +101,11 @@ public class YwtProtocolDecoder extends BaseProtocolDecoder {
 
         int satellites = parser.nextInt();
         position.setValid(satellites >= 3);
-        position.set(Event.KEY_SATELLITES, satellites);
+        position.set(Position.KEY_SATELLITES, satellites);
 
         String reportId = parser.next();
 
-        position.set(Event.KEY_STATUS, parser.next());
+        position.set(Position.KEY_STATUS, parser.next());
 
         // Send response
         if ((type.equals("KP") || type.equals("EP")) && channel != null) {

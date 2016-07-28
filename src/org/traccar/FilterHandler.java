@@ -17,7 +17,6 @@ package org.traccar;
 
 import org.traccar.helper.DistanceCalculator;
 import org.traccar.helper.Log;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 public class FilterHandler extends BaseDataHandler {
@@ -58,8 +57,8 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private Position getLastPosition(long deviceId) {
-        if (Context.getConnectionManager() != null) {
-            return Context.getConnectionManager().getLastPosition(deviceId);
+        if (Context.getIdentityManager() != null) {
+            return Context.getIdentityManager().getLastPosition(deviceId);
         }
         return null;
     }
@@ -90,7 +89,7 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private boolean filterApproximate(Position position) {
-        Boolean approximate = (Boolean) position.getAttributes().get(Event.KEY_APPROXIMATE);
+        Boolean approximate = (Boolean) position.getAttributes().get(Position.KEY_APPROXIMATE);
         return filterApproximate && approximate != null && approximate;
     }
 

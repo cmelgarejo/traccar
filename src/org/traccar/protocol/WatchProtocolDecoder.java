@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ package org.traccar.protocol;
 
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -47,9 +47,9 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
             .number("(dd)(dd)(dd),")             // date (ddmmyy)
             .number("(dd)(dd)(dd),")             // time
             .expression("([AV]),")               // validity
-            .number("-?(d+.d+),")                // latitude
+            .number(" *(-?d+.d+),")              // latitude
             .expression("([NS]),")
-            .number("-?(d+.d+),")                // longitude
+            .number(" *(-?d+.d+),")              // longitude
             .expression("([EW])?,")
             .number("(d+.d+),")                  // speed
             .number("(d+.?d*),")                 // course
@@ -80,7 +80,8 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
 
         String manufacturer = parser.next();
         String id = parser.next();
-        if (!identify(id, channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, id);
+        if (deviceSession == null) {
             return null;
         }
 
@@ -96,11 +97,11 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
                 if (values.length >= 4) {
                     Position position = new Position();
                     position.setProtocol(getProtocolName());
-                    position.setDeviceId(getDeviceId());
+                    position.setDeviceId(deviceSession.getDeviceId());
 
                     getLastLocation(position, null);
 
-                    position.set(Event.KEY_BATTERY, values[3]);
+                    position.set(Position.KEY_BATTERY, values[3]);
 
                     return position;
                 }
@@ -119,7 +120,7 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
 
             Position position = new Position();
             position.setProtocol(getProtocolName());
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
             DateBuilder dateBuilder = new DateBuilder()
                     .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
@@ -133,9 +134,9 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
             position.setCourse(parser.nextDouble());
             position.setAltitude(parser.nextDouble());
 
-            position.set(Event.KEY_SATELLITES, parser.nextInt());
-            position.set(Event.KEY_GSM, parser.nextInt());
-            position.set(Event.KEY_BATTERY, parser.nextInt());
+            position.set(Position.KEY_SATELLITES, parser.nextInt());
+            position.set(Position.KEY_GSM, parser.nextInt());
+            position.set(Position.KEY_BATTERY, parser.nextInt());
 
             position.set("steps", parser.nextInt());
 

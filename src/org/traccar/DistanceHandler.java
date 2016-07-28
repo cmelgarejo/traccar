@@ -1,5 +1,6 @@
 /*
  * Copyright 2015 Amila Silva
+ * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +16,17 @@
  */
 package org.traccar;
 
+import org.traccar.helper.DistanceCalculator;
+import org.traccar.model.Position;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import org.traccar.helper.DistanceCalculator;
-import org.traccar.model.Event;
-import org.traccar.model.Position;
 
 public class DistanceHandler extends BaseDataHandler {
 
     private Position getLastPosition(long deviceId) {
-        if (Context.getConnectionManager() != null) {
-            return Context.getConnectionManager().getLastPosition(deviceId);
+        if (Context.getIdentityManager() != null) {
+            return Context.getIdentityManager().getLastPosition(deviceId);
         }
         return null;
     }
@@ -36,18 +37,20 @@ public class DistanceHandler extends BaseDataHandler {
 
         Position last = getLastPosition(position.getDeviceId());
         if (last != null) {
-            if (last.getAttributes().containsKey(Event.KEY_DISTANCE)) {
-                distance = ((Number) last.getAttributes().get(Event.KEY_DISTANCE)).doubleValue();
+            if (last.getAttributes().containsKey(Position.KEY_DISTANCE)) {
+                distance = ((Number) last.getAttributes().get(Position.KEY_DISTANCE)).doubleValue();
             }
 
-            distance += DistanceCalculator.distance(
-                    position.getLatitude(), position.getLongitude(),
-                    last.getLatitude(), last.getLongitude());
+            if (position.getValid()) {
+                distance += DistanceCalculator.distance(
+                        position.getLatitude(), position.getLongitude(),
+                        last.getLatitude(), last.getLongitude());
 
-            distance = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+                distance = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+            }
         }
 
-        position.set(Event.KEY_DISTANCE, distance);
+        position.set(Position.KEY_DISTANCE, distance);
         return position;
     }
 

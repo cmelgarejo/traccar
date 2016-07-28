@@ -113,29 +113,31 @@ Ext.define('Traccar.view.MapController', {
             deviceId = position.get('deviceId');
             device = Ext.getStore('Devices').findRecord('id', deviceId, 0, false, false, true);
 
-            geometry = new ol.geom.Point(ol.proj.fromLonLat([
-                position.get('longitude'),
-                position.get('latitude')
-            ]));
+            if (device) {
+                geometry = new ol.geom.Point(ol.proj.fromLonLat([
+                    position.get('longitude'),
+                    position.get('latitude')
+                ]));
 
-            if (deviceId in this.latestMarkers) {
-                marker = this.latestMarkers[deviceId];
-                marker.setGeometry(geometry);
-            } else {
-                marker = new ol.Feature(geometry);
-                marker.set('record', device);
-                this.latestMarkers[deviceId] = marker;
-                this.getView().getLatestSource().addFeature(marker);
+                if (deviceId in this.latestMarkers) {
+                    marker = this.latestMarkers[deviceId];
+                    marker.setGeometry(geometry);
+                } else {
+                    marker = new ol.Feature(geometry);
+                    marker.set('record', device);
+                    this.latestMarkers[deviceId] = marker;
+                    this.getView().getLatestSource().addFeature(marker);
 
-                style = this.getLatestMarker(this.getDeviceColor(device));
-                style.getText().setText(device.get('name'));
-                marker.setStyle(style);
-            }
+                    style = this.getLatestMarker(this.getDeviceColor(device));
+                    style.getText().setText(device.get('name'));
+                    marker.setStyle(style);
+                }
 
-            marker.getStyle().getImage().setRotation(position.get('course') * Math.PI / 180);
+                marker.getStyle().getImage().setRotation(position.get('course') * Math.PI / 180);
 
-            if (marker === this.selectedMarker && this.followSelected()) {
-                this.getView().getMapView().setCenter(marker.getGeometry().getCoordinates());
+                if (marker === this.selectedMarker && this.followSelected()) {
+                    this.getView().getMapView().setCenter(marker.getGeometry().getCoordinates());
+                }
             }
         }
     },
@@ -145,34 +147,38 @@ Ext.define('Traccar.view.MapController', {
 
         this.clearReport(store);
 
-        this.reportRoute = new ol.Feature({
-            geometry: new ol.geom.LineString([])
-        });
-        this.reportRoute.setStyle(this.getRouteStyle());
-        this.getView().getRouteSource().addFeature(this.reportRoute);
+        if (data.length > 0) {
+            this.reportRoute = new ol.Feature({
+                geometry: new ol.geom.LineString([])
+            });
+            this.reportRoute.setStyle(this.getRouteStyle());
+            this.getView().getRouteSource().addFeature(this.reportRoute);
 
-        for (i = 0; i < data.length; i++) {
-            position = data[i];
+            for (i = 0; i < data.length; i++) {
+                position = data[i];
 
-            point = ol.proj.fromLonLat([
-                position.get('longitude'),
-                position.get('latitude')
-            ]);
-            geometry = new ol.geom.Point(point);
+                point = ol.proj.fromLonLat([
+                    position.get('longitude'),
+                    position.get('latitude')
+                ]);
+                geometry = new ol.geom.Point(point);
 
-            marker = new ol.Feature(geometry);
-            marker.set('record', position);
-            this.reportMarkers[position.get('id')] = marker;
-            this.getView().getReportSource().addFeature(marker);
+                marker = new ol.Feature(geometry);
+                marker.set('record', position);
+                this.reportMarkers[position.get('id')] = marker;
+                this.getView().getReportSource().addFeature(marker);
 
-            style = this.getReportMarker();
-            style.getImage().setRotation(position.get('course') * Math.PI / 180);
-            /*style.getText().setText(
-                Ext.Date.format(position.get('fixTime'), Traccar.Style.dateTimeFormat));*/
+                style = this.getReportMarker();
+                style.getImage().setRotation(position.get('course') * Math.PI / 180);
+                /*style.getText().setText(
+                    Ext.Date.format(position.get('fixTime'), Traccar.Style.dateTimeFormat24));*/
 
-            marker.setStyle(style);
+                marker.setStyle(style);
 
-            this.reportRoute.getGeometry().appendCoordinate(point);
+                this.reportRoute.getGeometry().appendCoordinate(point);
+            }
+
+            this.getView().getMapView().fit(this.reportRoute.getGeometry(), this.getView().getMap().getSize());
         }
     },
 

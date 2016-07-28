@@ -15,15 +15,16 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.util.regex.Pattern;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.util.regex.Pattern;
 
 public class V680ProtocolDecoder extends BaseProtocolDecoder {
 
@@ -62,7 +63,7 @@ public class V680ProtocolDecoder extends BaseProtocolDecoder {
 
         if (sentence.length() == 16) {
 
-            identify(sentence.substring(1, sentence.length()), channel, remoteAddress);
+            getDeviceSession(channel, remoteAddress, sentence.substring(1, sentence.length()));
 
         } else {
 
@@ -74,20 +75,23 @@ public class V680ProtocolDecoder extends BaseProtocolDecoder {
             Position position = new Position();
             position.setProtocol(getProtocolName());
 
+            DeviceSession deviceSession;
             if (parser.hasNext()) {
-                identify(parser.next(), channel, remoteAddress);
+                deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
+            } else {
+                deviceSession = getDeviceSession(channel, remoteAddress);
             }
-            if (!hasDeviceId()) {
+            if (deviceSession == null) {
                 return null;
             }
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
             position.set("user", parser.next());
             position.setValid(parser.nextInt() > 0);
             position.set("password", parser.next());
-            position.set(Event.KEY_EVENT, parser.next());
+            position.set(Position.KEY_EVENT, parser.next());
             position.set("packet", parser.next());
-            position.set(Event.KEY_GSM, parser.next());
+            position.set(Position.KEY_GSM, parser.next());
 
             position.setLongitude(parser.nextCoordinate());
             position.setLatitude(parser.nextCoordinate());

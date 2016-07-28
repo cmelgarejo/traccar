@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,12 @@
  */
 package org.traccar.web;
 
-import java.beans.Introspector;
-import java.io.Reader;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.text.ParseException;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Map;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+import org.traccar.helper.Log;
+import org.traccar.model.MiscFormatter;
+
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
@@ -30,12 +28,15 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReader;
 import javax.json.JsonValue;
-
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-import org.traccar.helper.Log;
-import org.traccar.model.MiscFormatter;
+import java.beans.Introspector;
+import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.text.ParseException;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public final class JsonConverter {
 
@@ -106,9 +107,6 @@ public final class JsonConverter {
         Method[] methods = object.getClass().getMethods();
 
         for (Method method : methods) {
-            if (method.isAnnotationPresent(JsonIgnore.class)) {
-                continue;
-            }
             if (method.getName().startsWith("get") && method.getParameterTypes().length == 0) {
                 String name = Introspector.decapitalize(method.getName().substring(3));
                 try {
@@ -131,7 +129,15 @@ public final class JsonConverter {
                             json.add(name, DATE_FORMAT.print(new DateTime(value)));
                         }
                     } else if (method.getReturnType().equals(Map.class)) {
-                        json.add(name, MiscFormatter.toJson((Map) method.invoke(object)));
+                        Map value = (Map) method.invoke(object);
+                        if (value != null) {
+                            json.add(name, MiscFormatter.toJson(value));
+                        }
+                    } else if (method.getReturnType().equals(List.class)) {
+                        List value = (List) method.invoke(object);
+                        if (value != null) {
+                            json.add(name, arrayToJson(value));
+                        }
                     }
                 } catch (IllegalAccessException | InvocationTargetException error) {
                     Log.warning(error);
@@ -147,7 +153,23 @@ public final class JsonConverter {
         JsonArrayBuilder json = Json.createArrayBuilder();
 
         for (Object object : array) {
-            json.add(objectToJson(object));
+            switch (object.getClass().getSimpleName().toLowerCase()) {
+                case "string":
+                    json.add(object.toString());
+                    break;
+                case "long":
+                    json.add((long) object);
+                    break;
+                case "double":
+                    json.add((double) object);
+                    break;
+                case "boolean":
+                    json.add((boolean) object);
+                    break;
+                default:
+                    json.add(objectToJson(object));
+                    break;
+            }
         }
 
         return json.build();

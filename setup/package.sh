@@ -15,7 +15,6 @@ fi
 VERSION=$1
 
 check_requirement () {
-  eval $1 &>/dev/null
   if ! eval $1 &>/dev/null
   then
     echo $2
@@ -23,10 +22,10 @@ check_requirement () {
   fi 
 }
 
-check_requirement "ls ../../ext-*" "Missing ../../ext-X.X.X (https://www.sencha.com/legal/GPL/)"
+check_requirement "ls ../../ext-6.0.1" "Missing ../../ext-6.0.1 (https://www.sencha.com/legal/GPL/)"
 check_requirement "ls wrapper-delta-pack-*.tar.gz" "Missing wrapper-delta-pack-*.tar.gz (http://wrapper.tanukisoftware.com/doc/english/download.jsp)"
 check_requirement "ls wrapper-windows-x86-64-*.zip" "Missing wrapper-windows-x86-64-*.zip (http://www.krenger.ch/blog/tag/java-service-wrapper/)"
-check_requirement "ls isetup-*.exe" "Missing isetup-*.exe (http://www.jrsoftware.org/isdl.php)"
+check_requirement "ls innosetup-*.exe" "Missing isetup-*.exe (http://www.jrsoftware.org/isdl.php)"
 check_requirement "which sencha" "Missing sencha cmd package (https://www.sencha.com/products/extjs/cmd-download/)"
 check_requirement "which wine" "Missing wine package"
 check_requirement "which innoextract" "Missing innoextract package"
@@ -39,7 +38,7 @@ prepare () {
 
   ../tools/minify.sh
 
-  innoextract isetup-*.exe
+  innoextract innosetup-*.exe
   echo "If you got any errors here try isetup version 5.5.5 (or check what versions are supported by 'innoextract -v')"
 }
 
@@ -95,7 +94,7 @@ package_windows () {
 
   wine app/ISCC.exe windows/traccar.iss
 
-  zip -j traccar-$1-$VERSION.zip windows/Output/setup.exe README.txt
+  zip -j traccar-$1-$VERSION.zip windows/Output/traccar-setup.exe README.txt
 
   rm -rf windows/Output/
   rm -rf tmp/
@@ -103,32 +102,38 @@ package_windows () {
 
 package_unix () {
 
-  mkdir -p out/{bin,conf,data,lib,logs,web}
+  mkdir -p out/{bin,conf,data,lib,logs,web,schema}
 
   cp wrapper/src/bin/sh.script.in out/bin/traccar
   cp wrapper/lib/wrapper.jar out/lib
   cp wrapper/src/conf/wrapper.conf.in out/conf/wrapper.conf
 
-  sed -i 's/tail -1/tail -n 1/g' out/bin/traccar
+  sed -i.bak 's/tail -1/tail -n 1/g' out/bin/traccar
   chmod +x out/bin/traccar
 
   cp ../target/tracker-server.jar out
   cp ../target/lib/* out/lib
-  cp ../database/* out/data
+  cp ../schema/* out/schema
   cp -r ../web/* out/web
   cp unix/traccar.xml out/conf
 
-  sed -i 's/@app.name@/traccar/g' out/bin/traccar
-  sed -i 's/@app.long.name@/traccar/g' out/bin/traccar
+  sed -i.bak 's/@app.name@/traccar/g' out/bin/traccar
+  sed -i.bak 's/@app.long.name@/traccar/g' out/bin/traccar
 
-  sed -i '/wrapper.java.classpath.1/i\wrapper.java.classpath.2=../tracker-server.jar' out/conf/wrapper.conf
-  sed -i '/wrapper.app.parameter.1/i\wrapper.app.parameter.2=../conf/traccar.xml' out/conf/wrapper.conf
-  sed -i 's/wrapper.java.additional.1=/wrapper.java.additional.1=-Dfile.encoding=UTF-8/g' out/conf/wrapper.conf
-  sed -i 's/<YourMainClass>/org.traccar.Main/g' out/conf/wrapper.conf
-  sed -i 's/@app.name@/traccar/g' out/conf/wrapper.conf
-  sed -i 's/@app.long.name@/traccar/g' out/conf/wrapper.conf
-  sed -i 's/@app.description@/traccar/g' out/conf/wrapper.conf
-  sed -i 's/wrapper.logfile=..\/logs\/wrapper.log/wrapper.logfile=..\/logs\/wrapper.log.YYYYMMDD\nwrapper.logfile.rollmode=DATE/g' out/conf/wrapper.conf
+  sed -i.bak '/wrapper.java.classpath.1/a\
+wrapper.java.classpath.2=../tracker-server.jar' out/conf/wrapper.conf
+  sed -i.bak '/wrapper.app.parameter.1/a\
+wrapper.app.parameter.2=../conf/traccar.xml' out/conf/wrapper.conf
+  sed -i.bak 's/wrapper.java.additional.1=/wrapper.java.additional.1=-Dfile.encoding=UTF-8/g' out/conf/wrapper.conf
+  sed -i.bak 's/<YourMainClass>/org.traccar.Main/g' out/conf/wrapper.conf
+  sed -i.bak 's/@app.name@/traccar/g' out/conf/wrapper.conf
+  sed -i.bak 's/@app.long.name@/traccar/g' out/conf/wrapper.conf
+  sed -i.bak 's/@app.description@/traccar/g' out/conf/wrapper.conf
+  sed -i.bak 's/wrapper.logfile=..\/logs\/wrapper.log/wrapper.logfile=..\/logs\/wrapper.log.YYYYMMDD\
+wrapper.logfile.rollmode=DATE/g' out/conf/wrapper.conf
+
+  rm out/bin/traccar.bak
+  rm out/conf/wrapper.conf.bak
 
   eval $2
 
@@ -141,11 +146,11 @@ package_unix () {
 
 package_universal () {
 
-  mkdir -p out/{conf,data,lib,logs,web}
+  mkdir -p out/{conf,data,lib,logs,web,schema}
 
   cp ../target/tracker-server.jar out
   cp ../target/lib/* out/lib
-  cp ../database/* out/data
+  cp ../schema/* out/schema
   cp -r ../web/* out/web
   cp windows/traccar.xml out/conf
   cp README.txt out

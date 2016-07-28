@@ -15,6 +15,14 @@
  */
 package org.traccar.database;
 
+import org.traccar.Context;
+import org.traccar.helper.Log;
+import org.traccar.model.MiscFormatter;
+
+import javax.json.Json;
+import javax.json.JsonReader;
+import javax.json.stream.JsonParsingException;
+import javax.sql.DataSource;
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,13 +40,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import javax.json.Json;
-import javax.json.JsonReader;
-import javax.json.stream.JsonParsingException;
-import javax.sql.DataSource;
-import org.traccar.Context;
-import org.traccar.helper.Log;
-import org.traccar.model.MiscFormatter;
 
 public final class QueryBuilder {
 
@@ -172,9 +173,17 @@ public final class QueryBuilder {
     }
 
     public QueryBuilder setLong(String name, long value) throws SQLException {
+        return setLong(name, value, false);
+    }
+
+    public QueryBuilder setLong(String name, long value, boolean nullIfZero) throws SQLException {
         for (int i : indexes(name)) {
             try {
-                statement.setLong(i, value);
+                if (value == 0 && nullIfZero) {
+                    statement.setNull(i, Types.INTEGER);
+                } else {
+                    statement.setLong(i, value);
+                }
             } catch (SQLException error) {
                 statement.close();
                 connection.close();
@@ -244,7 +253,7 @@ public final class QueryBuilder {
                     } else if (method.getReturnType().equals(int.class)) {
                         setInteger(name, (Integer) method.invoke(object));
                     } else if (method.getReturnType().equals(long.class)) {
-                        setLong(name, (Long) method.invoke(object));
+                        setLong(name, (Long) method.invoke(object), name.endsWith("Id"));
                     } else if (method.getReturnType().equals(double.class)) {
                         setDouble(name, (Double) method.invoke(object));
                     } else if (method.getReturnType().equals(String.class)) {
@@ -356,10 +365,13 @@ public final class QueryBuilder {
             processors.add(new ResultSetProcessor<T>() {
                 @Override
                 public void process(T object, ResultSet resultSet) throws SQLException {
-                    try (JsonReader reader = Json.createReader(new StringReader(resultSet.getString(name)))) {
-                        method.invoke(object, MiscFormatter.fromJson(reader.readObject()));
-                    } catch (IllegalAccessException | InvocationTargetException | JsonParsingException error) {
-                        Log.warning(error);
+                    String value = resultSet.getString(name);
+                    if (value != null) {
+                        try (JsonReader reader = Json.createReader(new StringReader(value))) {
+                            method.invoke(object, MiscFormatter.fromJson(reader.readObject()));
+                        } catch (IllegalAccessException | InvocationTargetException | JsonParsingException error) {
+                            Log.warning(error);
+                        }
                     }
                 }
             });

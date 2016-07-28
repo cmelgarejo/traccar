@@ -19,16 +19,16 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
+import org.traccar.helper.BcdUtil;
 import org.traccar.helper.BitUtil;
-import org.traccar.helper.ChannelBufferTools;
 import org.traccar.helper.Checksum;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.TimeZone;
 
 public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
@@ -82,7 +82,8 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
         ChannelBuffer id = buf.readBytes(6); // phone number
         int index = buf.readUnsignedShort();
 
-        if (!identify(ChannelBuffers.hexDump(id), channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, ChannelBuffers.hexDump(id));
+        if (deviceSession == null) {
             return null;
         }
 
@@ -91,7 +92,7 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
             ChannelBuffer response = ChannelBuffers.dynamicBuffer();
             response.writeShort(index);
             response.writeByte(RESULT_SUCCESS);
-            response.writeBytes("authentication".getBytes(Charset.defaultCharset()));
+            response.writeBytes("authentication".getBytes(StandardCharsets.US_ASCII));
             sendResponse(channel, remoteAddress, MSG_TERMINAL_REGISTER_RESPONSE, id, response);
 
         } else if (type == MSG_TERMINAL_AUTH) {
@@ -102,13 +103,13 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
 
             Position position = new Position();
             position.setProtocol(getProtocolName());
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
-            position.set(Event.KEY_ALARM, buf.readUnsignedInt());
+            position.set(Position.KEY_ALARM, buf.readUnsignedInt());
 
             int flags = buf.readInt();
 
-            position.set(Event.KEY_IGNITION, BitUtil.check(flags, 0));
+            position.set(Position.KEY_IGNITION, BitUtil.check(flags, 0));
 
             position.setValid(BitUtil.check(flags, 1));
 
@@ -132,12 +133,12 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
             position.setCourse(buf.readUnsignedShort());
 
             DateBuilder dateBuilder = new DateBuilder(TimeZone.getTimeZone("GMT+8"))
-                    .setYear(ChannelBufferTools.readHexInteger(buf, 2))
-                    .setMonth(ChannelBufferTools.readHexInteger(buf, 2))
-                    .setDay(ChannelBufferTools.readHexInteger(buf, 2))
-                    .setHour(ChannelBufferTools.readHexInteger(buf, 2))
-                    .setMinute(ChannelBufferTools.readHexInteger(buf, 2))
-                    .setSecond(ChannelBufferTools.readHexInteger(buf, 2));
+                    .setYear(BcdUtil.readInteger(buf, 2))
+                    .setMonth(BcdUtil.readInteger(buf, 2))
+                    .setDay(BcdUtil.readInteger(buf, 2))
+                    .setHour(BcdUtil.readInteger(buf, 2))
+                    .setMinute(BcdUtil.readInteger(buf, 2))
+                    .setSecond(BcdUtil.readInteger(buf, 2));
             position.setTime(dateBuilder.getDate());
 
             // additional information

@@ -15,19 +15,20 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.nio.charset.Charset;
-import java.util.regex.Pattern;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.Checksum;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 public class CityeasyProtocolDecoder extends BaseProtocolDecoder {
 
@@ -73,8 +74,9 @@ public class CityeasyProtocolDecoder extends BaseProtocolDecoder {
         buf.readUnsignedShort(); // length
 
         String imei = ChannelBuffers.hexDump(buf.readBytes(7));
-        if (!identify(imei, channel, remoteAddress, false)
-                && !identify(imei + Checksum.luhn(Long.parseLong(imei)), channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(
+                channel, remoteAddress, imei, imei + Checksum.luhn(Long.parseLong(imei)));
+        if (deviceSession == null) {
             return null;
         }
 
@@ -82,7 +84,7 @@ public class CityeasyProtocolDecoder extends BaseProtocolDecoder {
 
         if (type == MSG_LOCATION_REPORT || type == MSG_LOCATION_REQUEST) {
 
-            String sentence = buf.toString(buf.readerIndex(), buf.readableBytes() - 8, Charset.defaultCharset());
+            String sentence = buf.toString(buf.readerIndex(), buf.readableBytes() - 8, StandardCharsets.US_ASCII);
             Parser parser = new Parser(PATTERN, sentence);
             if (!parser.matches()) {
                 return null;
@@ -90,7 +92,7 @@ public class CityeasyProtocolDecoder extends BaseProtocolDecoder {
 
             Position position = new Position();
             position.setProtocol(getProtocolName());
-            position.setDeviceId(getDeviceId());
+            position.setDeviceId(deviceSession.getDeviceId());
 
             if (parser.hasNext(15)) {
 
@@ -100,13 +102,13 @@ public class CityeasyProtocolDecoder extends BaseProtocolDecoder {
                 position.setTime(dateBuilder.getDate());
 
                 position.setValid(parser.next().equals("A"));
-                position.set(Event.KEY_SATELLITES, parser.next());
+                position.set(Position.KEY_SATELLITES, parser.next());
 
                 position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
                 position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
 
                 position.setSpeed(parser.nextDouble());
-                position.set(Event.KEY_HDOP, parser.nextDouble());
+                position.set(Position.KEY_HDOP, parser.nextDouble());
                 position.setAltitude(parser.nextDouble());
 
             } else {
@@ -115,10 +117,10 @@ public class CityeasyProtocolDecoder extends BaseProtocolDecoder {
 
             }
 
-            position.set(Event.KEY_MCC, parser.nextInt());
-            position.set(Event.KEY_MNC, parser.nextInt());
-            position.set(Event.KEY_LAC, parser.nextInt());
-            position.set(Event.KEY_CID, parser.nextInt());
+            position.set(Position.KEY_MCC, parser.nextInt());
+            position.set(Position.KEY_MNC, parser.nextInt());
+            position.set(Position.KEY_LAC, parser.nextInt());
+            position.set(Position.KEY_CID, parser.nextInt());
 
             return position;
         }

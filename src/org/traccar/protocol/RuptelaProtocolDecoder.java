@@ -15,17 +15,18 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public class RuptelaProtocolDecoder extends BaseProtocolDecoder {
 
@@ -44,7 +45,8 @@ public class RuptelaProtocolDecoder extends BaseProtocolDecoder {
         buf.readUnsignedShort(); // data length
 
         String imei = String.format("%015d", buf.readLong());
-        if (!identify(imei, channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, imei);
+        if (deviceSession == null) {
             return null;
         }
 
@@ -59,7 +61,7 @@ public class RuptelaProtocolDecoder extends BaseProtocolDecoder {
             for (int i = 0; i < count; i++) {
                 Position position = new Position();
                 position.setProtocol(getProtocolName());
-                position.setDeviceId(getDeviceId());
+                position.setDeviceId(deviceSession.getDeviceId());
 
                 position.setTime(new Date(buf.readUnsignedInt() * 1000));
                 buf.readUnsignedByte(); // timestamp extension
@@ -72,37 +74,37 @@ public class RuptelaProtocolDecoder extends BaseProtocolDecoder {
                 position.setCourse(buf.readUnsignedShort() / 100.0);
 
                 int satellites = buf.readUnsignedByte();
-                position.set(Event.KEY_SATELLITES, satellites);
+                position.set(Position.KEY_SATELLITES, satellites);
                 position.setValid(satellites >= 3);
 
                 position.setSpeed(UnitsConverter.knotsFromKph(buf.readUnsignedShort()));
 
-                position.set(Event.KEY_HDOP, buf.readUnsignedByte() / 10.0);
+                position.set(Position.KEY_HDOP, buf.readUnsignedByte() / 10.0);
 
                 buf.readUnsignedByte();
 
                 // Read 1 byte data
                 int cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedByte());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedByte());
                 }
 
                 // Read 2 byte data
                 cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedShort());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedShort());
                 }
 
                 // Read 4 byte data
                 cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedInt());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readUnsignedInt());
                 }
 
                 // Read 8 byte data
                 cnt = buf.readUnsignedByte();
                 for (int j = 0; j < cnt; j++) {
-                    position.set(Event.PREFIX_IO + buf.readUnsignedByte(), buf.readLong());
+                    position.set(Position.PREFIX_IO + buf.readUnsignedByte(), buf.readLong());
                 }
 
                 positions.add(position);

@@ -47,6 +47,7 @@ public class TaipProtocol extends BaseProtocol {
             @Override
             protected void addSpecificHandlers(ChannelPipeline pipeline) {
                 pipeline.addLast("stringDecoder", new StringDecoder());
+                pipeline.addLast("stringEncoder", new StringEncoder());
                 pipeline.addLast("objectDecoder", new TaipProtocolDecoder(TaipProtocol.this, false));
             }
         });

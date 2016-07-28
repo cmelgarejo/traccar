@@ -17,11 +17,11 @@ package org.traccar.protocol;
 
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -66,12 +66,13 @@ public class AuroProtocolDecoder extends BaseProtocolDecoder {
         Position position = new Position();
         position.setProtocol(getProtocolName());
 
-        position.set(Event.KEY_INDEX, parser.nextInt());
+        position.set(Position.KEY_INDEX, parser.nextInt());
 
-        if (!identify(parser.next(), channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
+        if (deviceSession == null) {
             return null;
         }
-        position.setDeviceId(getDeviceId());
+        position.setDeviceId(deviceSession.getDeviceId());
 
         position.setValid(true);
         position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG_MIN_MIN));
@@ -85,8 +86,8 @@ public class AuroProtocolDecoder extends BaseProtocolDecoder {
         position.setCourse(parser.nextDouble());
         position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
 
-        position.set(Event.KEY_BATTERY, parser.nextInt());
-        position.set(Event.KEY_CHARGE, parser.nextInt() == 1);
+        position.set(Position.KEY_BATTERY, parser.nextInt());
+        position.set(Position.KEY_CHARGE, parser.nextInt() == 1);
 
         return position;
     }

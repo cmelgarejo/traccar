@@ -31,7 +31,7 @@ Ext.define('Traccar.view.ServerDialog', {
             name: 'registration',
             fieldLabel: Strings.serverRegistration,
             allowBlank: false
-        },{
+        }, {
             xtype: 'checkboxfield',
             name: 'readonly',
             fieldLabel: Strings.serverReadonly,
@@ -79,6 +79,11 @@ Ext.define('Traccar.view.ServerDialog', {
             xtype: 'numberfield',
             name: 'zoom',
             fieldLabel: Strings.serverZoom
+        }, {
+            xtype: 'checkboxfield',
+            name: 'twelveHourFormat',
+            fieldLabel: Strings.settingsTwelveHourFormat,
+            allowBlank: false
         }]
     }
 });

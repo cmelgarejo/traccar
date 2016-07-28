@@ -15,15 +15,16 @@
  */
 package org.traccar.protocol;
 
-import java.net.SocketAddress;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
+import org.traccar.DeviceSession;
 import org.traccar.helper.BitUtil;
 import org.traccar.helper.DateBuilder;
-import org.traccar.model.Event;
 import org.traccar.model.Position;
+
+import java.net.SocketAddress;
 
 public class TzoneProtocolDecoder extends BaseProtocolDecoder {
 
@@ -46,7 +47,8 @@ public class TzoneProtocolDecoder extends BaseProtocolDecoder {
         buf.readUnsignedInt(); // firmware
 
         String imei = ChannelBuffers.hexDump(buf.readBytes(8)).substring(1);
-        if (!identify(imei, channel, remoteAddress)) {
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, imei);
+        if (deviceSession == null) {
             return null;
         }
 
@@ -54,7 +56,7 @@ public class TzoneProtocolDecoder extends BaseProtocolDecoder {
 
         Position position = new Position();
         position.setProtocol(getProtocolName());
-        position.setDeviceId(getDeviceId());
+        position.setDeviceId(deviceSession.getDeviceId());
 
         // GPS info
 
@@ -65,7 +67,7 @@ public class TzoneProtocolDecoder extends BaseProtocolDecoder {
             return null;
         }
 
-        position.set(Event.KEY_SATELLITES, buf.readUnsignedByte());
+        position.set(Position.KEY_SATELLITES, buf.readUnsignedByte());
 
         double lat = buf.readUnsignedInt() / 600000.0;
         double lon = buf.readUnsignedInt() / 600000.0;
@@ -77,7 +79,7 @@ public class TzoneProtocolDecoder extends BaseProtocolDecoder {
 
         position.setSpeed(buf.readUnsignedShort() * 0.01);
 
-        position.set(Event.KEY_ODOMETER, buf.readUnsignedMedium());
+        position.set(Position.KEY_ODOMETER, buf.readUnsignedMedium());
 
         int flags = buf.readUnsignedShort();
         position.setCourse(BitUtil.to(flags, 9));
@@ -100,8 +102,8 @@ public class TzoneProtocolDecoder extends BaseProtocolDecoder {
 
         if (blockLength > 0) {
 
-            position.set(Event.KEY_LAC, buf.readUnsignedShort());
-            position.set(Event.KEY_CID, buf.readUnsignedShort());
+            position.set(Position.KEY_LAC, buf.readUnsignedShort());
+            position.set(Position.KEY_CID, buf.readUnsignedShort());
 
         }
 
@@ -114,16 +116,16 @@ public class TzoneProtocolDecoder extends BaseProtocolDecoder {
 
         if (blockLength > 0) {
 
-            position.set(Event.KEY_ALARM, buf.readUnsignedByte());
+            position.set(Position.KEY_ALARM, buf.readUnsignedByte());
             buf.readUnsignedByte(); // terminal info
-            position.set(Event.PREFIX_IO + 1, buf.readUnsignedShort());
-            position.set(Event.KEY_GSM, buf.readUnsignedByte());
+            position.set(Position.PREFIX_IO + 1, buf.readUnsignedShort());
+            position.set(Position.KEY_GSM, buf.readUnsignedByte());
             buf.readUnsignedByte(); // GSM status
-            position.set(Event.KEY_BATTERY, buf.readUnsignedShort());
-            position.set(Event.KEY_POWER, buf.readUnsignedShort());
-            position.set(Event.PREFIX_ADC + 1, buf.readUnsignedShort());
-            position.set(Event.PREFIX_ADC + 2, buf.readUnsignedShort());
-            position.set(Event.PREFIX_TEMP + 1, buf.readUnsignedShort());
+            position.set(Position.KEY_BATTERY, buf.readUnsignedShort());
+            position.set(Position.KEY_POWER, buf.readUnsignedShort());
+            position.set(Position.PREFIX_ADC + 1, buf.readUnsignedShort());
+            position.set(Position.PREFIX_ADC + 2, buf.readUnsignedShort());
+            position.set(Position.PREFIX_TEMP + 1, buf.readUnsignedShort());
 
         }
 
